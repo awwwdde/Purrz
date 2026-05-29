@@ -1,0 +1,16 @@
+{
+  "name": "purrz-monorepo",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "dev": "concurrently -n FRONT,BACK -c cyan,magenta \"pnpm --filter purrz-frontend dev\" \"pnpm run dev:backend\"",
+    "dev:frontend": "pnpm --filter purrz-frontend dev",
+    "dev:backend": "cd backend && python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000",
+    "build": "pnpm --filter purrz-frontend build",
+    "install:backend": "cd backend && python -m pip install -r requirements.txt"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.1"
+  },
+  "packageManager": "pnpm@9.12.0"
+}
