@@ -3,11 +3,11 @@
 # Контракт гостя нашей панели:
 #   • один контейнер, слушает порт 8080 внутри
 #   • GET /healthz → 200, когда сервис готов
-#   • DATABASE_URL берётся из env (мы пока не используем, но не падаем)
+#   • DATABASE_URL берётся из env (Postgres от awwwdde-панели)
 #
 # Multistage:
 #   1. node — собирает SPA через pnpm в frontend/dist
-#   2. python:3.12-slim — ставит nginx + uvicorn + supervisor,
+#   2. python:3.12-slim — ставит nginx + uvicorn + supervisor + psycopg,
 #      nginx раздаёт SPA и проксирует /api → uvicorn (127.0.0.1:8000),
 #      внешний порт = 8080.
 
@@ -15,7 +15,6 @@
 FROM node:20-alpine AS web
 WORKDIR /build
 
-# Сначала кешируем зависимости — слой не пересобирается при правке исходников.
 RUN corepack enable && corepack prepare pnpm@9.12.0 --activate
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
@@ -23,12 +22,10 @@ COPY frontend/package.json ./frontend/
 
 RUN pnpm install --frozen-lockfile
 
-# Копируем исходники фронта (и только их — корневой .dockerignore исключит лишнее).
 COPY frontend ./frontend
 
-# VITE_API_BASE можно задать на этапе сборки (если фронт начнёт ходить в /api).
-# По умолчанию относительный путь — works в любом домене.
-ARG VITE_API_BASE=""
+# Фронт ходит относительно (одна origin с бэком через nginx).
+ARG VITE_API_BASE="/api"
 ENV VITE_API_BASE=${VITE_API_BASE}
 
 RUN pnpm --filter purrz-frontend build
@@ -43,13 +40,15 @@ ENV PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
     PYTHONIOENCODING=utf-8
 
+# nginx + supervisor + curl (для отладки healthcheck'ов) + libpq для psycopg.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends nginx supervisor curl \
+    && apt-get install -y --no-install-recommends \
+         nginx supervisor curl libpq5 \
     && rm -rf /var/lib/apt/lists/* /var/log/nginx/*
 
 WORKDIR /app
 
-# Python deps бэка — отдельный слой (пересобирается только если меняли requirements.txt).
+# Python deps бэка — отдельный слой (кешируется).
 COPY backend/requirements.txt /app/backend/requirements.txt
 RUN pip install -r /app/backend/requirements.txt
 
