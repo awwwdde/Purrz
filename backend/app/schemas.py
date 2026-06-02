@@ -40,7 +40,7 @@ class RefreshRequest(BaseModel):
 
 
 class UserOut(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
     id: int
     email: str
@@ -55,7 +55,7 @@ class UserOut(BaseModel):
 # ── Каталог ────────────────────────────────────────────────────────────────
 
 class CategoryOut(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
     id: int
     slug: str
@@ -65,7 +65,7 @@ class CategoryOut(BaseModel):
 
 
 class ServiceOut(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
     id: int
     slug: str
@@ -112,7 +112,7 @@ class CompanyServiceOut(BaseModel):
 class CompanyOut(BaseModel):
     """Полная карточка компании. Для листинга используем тот же объект —
     галерея/отзывы могут быть пустыми, фронт сам выберет что показывать."""
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
     id: int
     name: str
@@ -172,7 +172,7 @@ class CompanyUpdate(BaseModel):
 # ── Отзывы ─────────────────────────────────────────────────────────────────
 
 class ReviewOut(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
     id: int
     author: str = Field(alias="author_name")
@@ -203,7 +203,7 @@ class LeadCreate(BaseModel):
 
 
 class LeadOut(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
     id: int
     companyId: int = Field(alias="company_id")

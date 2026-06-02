@@ -287,12 +287,15 @@ export const realApi = {
     return data.items.map(companyOut);
   },
 
-  async getCompany(id: string): Promise<Company | undefined> {
+  async getCompany(id: string | undefined | null): Promise<Company | undefined> {
+    // Guard: страницы CRM могут позвать с undefined пока persisted-user из
+    // zustand ещё не гидрировался. Возвращаем undefined вместо HTTP-вызова.
+    if (!id || id === "undefined" || id === "null") return undefined;
     try {
       const data = await api<BackendCompany>(`/companies/${id}`, { anonymous: true });
       return companyOut(data);
     } catch (e) {
-      if (e instanceof ApiError && e.status === 404) return undefined;
+      if (e instanceof ApiError && (e.status === 404 || e.status === 422)) return undefined;
       throw e;
     }
   },
