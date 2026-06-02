@@ -24,9 +24,21 @@ app = FastAPI(
     version="0.1.0",
 )
 
+# CORS — в проде фронт и бэк живут на одном origin (nginx внутри контейнера),
+# CORS-заголовки не нужны. Оставляем dev-origins + публичный домен платформы.
+import os
+
+_default_origins = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "https://purrz.awwwdde.art",
+]
+_extra = [
+    o.strip() for o in os.environ.get("CORS_ORIGINS", "").split(",") if o.strip()
+]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins=_default_origins + _extra,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -172,6 +184,13 @@ def health():
         timestamp=datetime.now(timezone.utc).isoformat(),
         version="0.1.0",
     )
+
+
+# /healthz — контракт нашей awwwdde-панели (она ждёт 200, чтобы прописать
+# маршрут в Caddy). Делаем алиасом /health, чтобы не плодить логики.
+@app.get("/healthz", response_model=HealthResponse, tags=["root"])
+def healthz():
+    return health()
 
 
 @app.get("/categories", response_model=list[Category], tags=["services"])

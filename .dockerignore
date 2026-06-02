@@ -1,0 +1,33 @@
+# Кэшы Node / pnpm
+node_modules
+**/node_modules
+.pnpm-store
+
+# Python
+**/__pycache__
+**/*.pyc
+**/.venv
+**/venv
+backend/.venv
+
+# Build артефакты — фронт пересобирается в Docker заново
+frontend/dist
+frontend/.vite
+
+# Git / IDE
+.git
+.gitignore
+.gitattributes
+.vscode
+.idea
+.claude
+
+# Локальные .env (секреты задаёт панель)
+.env
+.env.local
+.env.*.local
+
+# Логи и временное
+*.log
+.DS_Store
+Thumbs.db
