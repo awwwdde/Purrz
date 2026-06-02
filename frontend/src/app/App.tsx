@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
 import { MainLayout } from "@/layouts/MainLayout";
@@ -57,6 +58,14 @@ function RequireCompany({ children }: { children: React.ReactNode }) {
 
 export function App() {
   const location = useLocation();
+
+  // При старте SPA валидируем сохранённый JWT и подтягиваем актуального user'а
+  // с бэка. Если токен протух — auth-стор сам очистит user.
+  const hydrate = useAuth((s) => s.hydrate);
+  useEffect(() => {
+    void hydrate();
+  }, [hydrate]);
+
   return (
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
