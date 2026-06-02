@@ -3,6 +3,8 @@ fastapi==0.115.0
 uvicorn[standard]==0.30.6
 pydantic==2.9.2
 pydantic-settings==2.5.2
+# EmailStr в pydantic требует отдельный пакет — без него падает import схем.
+email-validator==2.2.0
 
 # БД
 SQLAlchemy==2.0.36
