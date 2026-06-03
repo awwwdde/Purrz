@@ -35,6 +35,20 @@ def _emit_token_pair(user_id: int) -> TokenPair:
     return TokenPair(access_token=access, refresh_token=refresh, expires_at=access_exp)
 
 
+def _self_heal_user(db: Session, user: User) -> User:
+    """Если у юзера в company_id стоит ссылка на несуществующую/забаненную
+    компанию, обнуляем — иначе UI показывает «Кабинет компании», а пуск в CRM
+    падает. Возвращает того же user-а (теперь с актуальными полями)."""
+    if user.company_id:
+        c = db.get(Company, user.company_id)
+        if not c or not c.is_active:
+            user.company_id = None
+            if user.role == UserRole.company_manager:
+                user.role = UserRole.user
+            db.commit()
+    return user
+
+
 def _attach_guest_leads(db: Session, user: User) -> int:
     """Связать гостевые лиды с этим юзером по email/phone.
 
@@ -78,6 +92,7 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)) -> TokenPair:
     user = db.scalar(select(User).where(User.email == email))
     if not user or not user.is_active or not verify_password(payload.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Неверный email или пароль")
+    _self_heal_user(db, user)
     return _emit_token_pair(user.id)
 
 
@@ -93,6 +108,7 @@ def refresh(payload: RefreshRequest, db: Session = Depends(get_db)) -> TokenPair
     user = db.get(User, uid)
     if not user or not user.is_active:
         raise HTTPException(status_code=401, detail="Пользователь отключён")
+    _self_heal_user(db, user)
     return _emit_token_pair(user.id)
 
 
@@ -101,17 +117,7 @@ def me(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> User:
-    # Self-heal: если у юзера в company_id ссылка на удалённую/отсутствующую
-    # компанию (phantom от старой битой транзакции или после ban admin'ом),
-    # обнуляем — иначе UI показывает «Кабинет компании», а товаров нет.
-    if user.company_id:
-        c = db.get(Company, user.company_id)
-        if not c or not c.is_active:
-            user.company_id = None
-            if user.role == UserRole.company_manager:
-                user.role = UserRole.user
-            db.commit()
-    return user
+    return _self_heal_user(db, user)
 
 
 @router.post("/register-company", response_model=CompanyOut, status_code=201)

@@ -28,7 +28,15 @@ export const useAuth = create<AuthState>()(
       async login(email, password) {
         set({ loading: true, error: null });
         try {
-          const user = await realApi.login(email, password);
+          let user = await realApi.login(email, password);
+          // Подстраховка: ещё раз дёргаем /me — бэкенд может self-heal'ить
+          // phantom companyId, и тогда мы получим уже чистое состояние без
+          // редиректа в /crm на несуществующую компанию.
+          try {
+            user = await realApi.getMe();
+          } catch {
+            /* getMe не критичен — у нас уже есть user из логина */
+          }
           set({ user, loading: false });
           return user;
         } catch (e) {
