@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Badge, Button, Icon, Input } from "@/shared/ui";
 import { useAuth } from "@/app/store/auth";
-import { mockApi } from "@/shared/api/mock-api";
+import { realApi } from "@/shared/api/api";
 import type { Company } from "@/shared/types";
 import { formatDate } from "@/shared/lib/format";
 
@@ -18,7 +18,9 @@ export function AccountProfilePage() {
 
   useEffect(() => {
     if (user?.companyId) {
-      mockApi.getCompany(user.companyId).then((c) => setCompany(c ?? null));
+      // user.companyId с бэка приходит как number; realApi.getCompany ждёт
+      // string-id (или null/undefined). Приводим явно.
+      realApi.getCompany(String(user.companyId)).then((c) => setCompany(c ?? null));
     } else {
       setCompany(null);
     }

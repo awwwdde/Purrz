@@ -397,3 +397,119 @@ export const realApi = {
 };
 
 export type RealApi = typeof realApi;
+
+
+// ── Admin API ────────────────────────────────────────────────────────────────
+// Используется только в /admin (роль admin). Все вызовы под Bearer-токеном.
+
+export interface AdminUser {
+  id: number;
+  email: string;
+  name: string;
+  role: "user" | "company_manager" | "admin";
+  phone: string | null;
+  avatar: string | null;
+  companyId: number | null;
+  createdAt: string;
+  isActive?: boolean;
+}
+
+interface BackendAdminUser {
+  id: number;
+  email: string;
+  name: string;
+  role: "user" | "company_manager" | "admin";
+  phone: string | null;
+  avatar: string | null;
+  companyId: number | null;
+  createdAt: string;
+  is_active?: boolean;
+}
+
+export const adminApi = {
+  // ── Пользователи ───────────────────────────────────────────────────────
+  async listUsers(): Promise<AdminUser[]> {
+    const list = await api<BackendAdminUser[]>("/admin/users");
+    return list.map((u) => ({ ...u, isActive: u.is_active ?? true }));
+  },
+
+  async banUser(userId: number, active: boolean): Promise<void> {
+    await api(`/admin/users/${userId}/ban`, {
+      method: "PATCH",
+      body: { is_active: active },
+    });
+  },
+
+  // ── Компании ───────────────────────────────────────────────────────────
+  async listAllCompanies(params?: { search?: string; page?: number }): Promise<{ items: Company[]; total: number }> {
+    // Используем публичный /companies — для admin он отдаёт всё, включая
+    // непроверенные (бэк фильтрует только is_active=true; забаненных не покажет).
+    const list = await api<BackendCompanyList>(`/companies`, {
+      query: {
+        page: params?.page ?? 1,
+        page_size: 100,
+        search: params?.search,
+        sort: "newest",
+      },
+      anonymous: true,
+    });
+    return { items: list.items.map(companyOut), total: list.total };
+  },
+
+  async verifyCompany(companyId: number, verified: boolean): Promise<void> {
+    await api(`/admin/companies/${companyId}/verify`, {
+      method: "PATCH",
+      body: { verified },
+    });
+  },
+
+  async banCompany(companyId: number, active: boolean): Promise<void> {
+    await api(`/admin/companies/${companyId}/ban`, {
+      method: "PATCH",
+      body: { is_active: active },
+    });
+  },
+
+  // ── Отзывы ─────────────────────────────────────────────────────────────
+  async deleteReview(reviewId: number): Promise<void> {
+    await api(`/admin/reviews/${reviewId}`, { method: "DELETE" });
+  },
+
+  // ── Категории ──────────────────────────────────────────────────────────
+  async createCategory(payload: {
+    slug: string; name: string; icon: string; description: string; sort_order?: number;
+  }): Promise<void> {
+    await api(`/admin/categories`, { method: "POST", body: payload });
+  },
+
+  async updateCategory(id: number, payload: {
+    slug: string; name: string; icon: string; description: string; sort_order?: number;
+  }): Promise<void> {
+    await api(`/admin/categories/${id}`, { method: "PUT", body: payload });
+  },
+
+  async deleteCategory(id: number): Promise<void> {
+    await api(`/admin/categories/${id}`, { method: "DELETE" });
+  },
+
+  // ── Услуги ─────────────────────────────────────────────────────────────
+  async createService(payload: {
+    slug: string; name: string; description: string;
+    categoryId: number; minPrice: number; maxPrice: number;
+  }): Promise<void> {
+    await api(`/admin/services`, { method: "POST", body: payload });
+  },
+
+  async updateService(id: number, payload: {
+    slug: string; name: string; description: string;
+    categoryId: number; minPrice: number; maxPrice: number;
+  }): Promise<void> {
+    await api(`/admin/services/${id}`, { method: "PUT", body: payload });
+  },
+
+  async deleteService(id: number): Promise<void> {
+    await api(`/admin/services/${id}`, { method: "DELETE" });
+  },
+};
+
+export type AdminApi = typeof adminApi;

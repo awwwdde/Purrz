@@ -20,6 +20,11 @@ import { CrmLeadsPage } from "@/pages/crm/CrmLeadsPage";
 import { CrmAnalyticsPage } from "@/pages/crm/CrmAnalyticsPage";
 import { CrmServicesPage } from "@/pages/crm/CrmServicesPage";
 import { CrmProfilePage } from "@/pages/crm/CrmProfilePage";
+import { AdminLayout } from "@/layouts/AdminLayout";
+import { AdminCompaniesPage } from "@/pages/admin/AdminCompaniesPage";
+import { AdminUsersPage } from "@/pages/admin/AdminUsersPage";
+import { AdminReviewsPage } from "@/pages/admin/AdminReviewsPage";
+import { AdminCatalogPage } from "@/pages/admin/AdminCatalogPage";
 import { useAuth } from "@/app/store/auth";
 
 /** Любой авторизованный пользователь */
@@ -33,6 +38,24 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
         replace
       />
     );
+  }
+  return <>{children}</>;
+}
+
+/** Авторизован И имеет роль admin */
+function RequireAdmin({ children }: { children: React.ReactNode }) {
+  const user = useAuth((s) => s.user);
+  const location = useLocation();
+  if (!user) {
+    return (
+      <Navigate
+        to={`/login?next=${encodeURIComponent(location.pathname + location.search)}`}
+        replace
+      />
+    );
+  }
+  if (user.role !== "admin") {
+    return <Navigate to="/" replace />;
   }
   return <>{children}</>;
 }
@@ -113,6 +136,19 @@ export function App() {
           <Route path="/crm/analytics" element={<CrmAnalyticsPage />} />
           <Route path="/crm/services" element={<CrmServicesPage />} />
           <Route path="/crm/profile" element={<CrmProfilePage />} />
+        </Route>
+
+        <Route
+          element={
+            <RequireAdmin>
+              <AdminLayout />
+            </RequireAdmin>
+          }
+        >
+          <Route path="/admin" element={<AdminCompaniesPage />} />
+          <Route path="/admin/reviews" element={<AdminReviewsPage />} />
+          <Route path="/admin/users" element={<AdminUsersPage />} />
+          <Route path="/admin/catalog" element={<AdminCatalogPage />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { Badge, Button, Container, Icon, Input, Textarea } from "@/shared/ui";
-import { mockApi } from "@/shared/api/mock-api";
+import { realApi } from "@/shared/api/api";
 import type { Company, InnLookupResult } from "@/shared/types";
 import { useAuth } from "@/app/store/auth";
 
@@ -11,7 +11,10 @@ type Step = 1 | 2 | 3;
 export function RegisterCompanyPage() {
   const navigate = useNavigate();
   const user = useAuth((s) => s.user);
-  const attachCompany = useAuth((s) => s.attachCompany);
+  // После создания компании дёргаем hydrate() — он перечитает /api/auth/me
+  // и обновит user.companyId + role на актуальные с бэка. Это надёжнее, чем
+  // локально подменять через attachCompany (мок-эпоха, фейк-id).
+  const hydrate = useAuth((s) => s.hydrate);
 
   const [existingCompany, setExistingCompany] = useState<Company | null>(null);
   const [checkingExisting, setCheckingExisting] = useState(true);
@@ -38,7 +41,7 @@ export function RegisterCompanyPage() {
       setCheckingExisting(false);
       return;
     }
-    mockApi.getCompany(user.companyId).then((c) => {
+    realApi.getCompany(String(user.companyId)).then((c) => {
       if (c) setExistingCompany(c);
       setCheckingExisting(false);
     });
@@ -48,7 +51,7 @@ export function RegisterCompanyPage() {
     setInnErr(null);
     setLooking(true);
     try {
-      const res = await mockApi.lookupInn(inn);
+      const res = await realApi.lookupInn(inn);
       setLookup(res);
       setName(res.name);
       setDescription(
@@ -68,7 +71,7 @@ export function RegisterCompanyPage() {
     if (!lookup || !user) return;
     setSubmitting(true);
     try {
-      const newCo = await mockApi.createCompany({
+      await realApi.createCompany({
         name,
         inn: lookup.inn,
         description,
@@ -87,9 +90,12 @@ export function RegisterCompanyPage() {
           new Date().getFullYear() - new Date(lookup.registeredAt).getFullYear(),
         verified: false,
       });
-      // Привязываем созданную компанию к текущему пользователю и поднимаем роль
-      attachCompany(newCo.id);
+      // Бэк сам привязал компанию к юзеру и поднял роль до company_manager.
+      // Перечитываем /me чтобы zustand-store увидел свежие companyId+role.
+      await hydrate();
       setStep(3);
+    } catch (e) {
+      setInnErr((e as Error).message);
     } finally {
       setSubmitting(false);
     }

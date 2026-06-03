@@ -52,6 +52,14 @@ export const useAuth = create<AuthState>()(
       logout() {
         realApi.logout();
         set({ user: null });
+        // Затираем протухший mock-state из эпохи mockApi — иначе при
+        // следующем логине AccountPage/CRM могут прочитать фейковую компанию
+        // из localStorage и крашнуть страницу.
+        try {
+          window.localStorage.removeItem("purrz:mock-state:v1");
+        } catch {
+          /* ignore */
+        }
       },
 
       setUser(user) {
