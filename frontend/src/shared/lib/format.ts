@@ -11,16 +11,29 @@ export function formatPriceRange(min: number, max: number): string {
   return `${formatPrice(min)} — ${formatPrice(max)}`;
 }
 
-export function formatDate(iso: string): string {
+// Безопасный парс: undefined/null/пустая строка/любая мусорная строка → null.
+// Спасает страницы аккаунта и CRM от RangeError "Invalid time value", когда
+// user.createdAt не успел подтянуться с бэка (zustand persist на старте).
+function _safeDate(iso: string | null | undefined): Date | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+export function formatDate(iso: string | null | undefined): string {
+  const d = _safeDate(iso);
+  if (!d) return "—";
   return new Intl.DateTimeFormat("ru-RU", {
     day: "2-digit",
     month: "long",
     year: "numeric",
-  }).format(new Date(iso));
+  }).format(d);
 }
 
-export function formatRelative(iso: string): string {
-  const diff = (Date.now() - new Date(iso).getTime()) / 1000;
+export function formatRelative(iso: string | null | undefined): string {
+  const d = _safeDate(iso);
+  if (!d) return "—";
+  const diff = (Date.now() - d.getTime()) / 1000;
   if (diff < 60) return "только что";
   if (diff < 3600) return `${Math.floor(diff / 60)} мин назад`;
   if (diff < 86400) return `${Math.floor(diff / 3600)} ч назад`;
