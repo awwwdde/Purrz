@@ -97,7 +97,20 @@ def refresh(payload: RefreshRequest, db: Session = Depends(get_db)) -> TokenPair
 
 
 @router.get("/me", response_model=UserOut)
-def me(user: User = Depends(get_current_user)) -> User:
+def me(
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> User:
+    # Self-heal: если у юзера в company_id ссылка на удалённую/отсутствующую
+    # компанию (phantom от старой битой транзакции или после ban admin'ом),
+    # обнуляем — иначе UI показывает «Кабинет компании», а товаров нет.
+    if user.company_id:
+        c = db.get(Company, user.company_id)
+        if not c or not c.is_active:
+            user.company_id = None
+            if user.role == UserRole.company_manager:
+                user.role = UserRole.user
+            db.commit()
     return user
 
 
@@ -106,10 +119,19 @@ def register_company(
     payload: CompanyCreate,
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
-) -> Company:
+) -> CompanyOut:
+    # Защитная пара проверок: если у юзера уже есть company — отправим обратно
+    # эту же компанию (вместо ошибки), чтобы фронт мог продолжить флоу.
     if user.company_id:
-        raise HTTPException(status_code=409, detail="У вас уже есть компания")
-    if db.scalar(select(Company).where(Company.inn == payload.inn)):
+        existing = db.get(Company, user.company_id)
+        if existing:
+            return _serialize_company(db, existing)
+        # компания исчезла — обнуляем у юзера, продолжаем регистрацию
+        user.company_id = None
+        db.commit()
+
+    dup = db.scalar(select(Company).where(Company.inn == payload.inn))
+    if dup:
         raise HTTPException(status_code=409, detail="Компания с этим ИНН уже зарегистрирована")
 
     company = Company(
@@ -144,4 +166,24 @@ def register_company(
 
     db.commit()
     db.refresh(company)
-    return company
+    # Возвращаем уже сериализованный CompanyOut — иначе pydantic пытается
+    # читать у SQLAlchemy-объекта поле `contacts` (его нет, есть только
+    # contact_phone/email/site) и валит 500.
+    return _serialize_company(db, company)
+
+
+def _serialize_company(db: Session, company: Company) -> CompanyOut:
+    """То же что companies._to_company_out, но локально — без циклов импорта."""
+    from ..routers.companies import _to_company_out
+
+    services_map: dict[int, str] = {}
+    if company.company_services:
+        services_map = {
+            s.id: s.name
+            for s in db.scalars(
+                select(Service).where(
+                    Service.id.in_({cs.service_id for cs in company.company_services})
+                )
+            )
+        }
+    return _to_company_out(company, services_map)

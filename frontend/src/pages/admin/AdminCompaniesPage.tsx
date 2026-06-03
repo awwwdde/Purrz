@@ -24,7 +24,10 @@ export function AdminCompaniesPage() {
     void reload();
   }, [reload]);
 
-  async function act(co: Company, action: "verify" | "unverify" | "ban" | "unban") {
+  async function act(co: Company, action: "verify" | "unverify" | "ban" | "unban" | "delete") {
+    if (action === "delete" && !window.confirm(
+      `Удалить компанию «${co.name}» вместе с её услугами, отзывами и заявками?`,
+    )) return;
     setBusy((b) => ({ ...b, [co.id]: action }));
     setError(null);
     try {
@@ -33,7 +36,12 @@ export function AdminCompaniesPage() {
       if (action === "unverify") await adminApi.verifyCompany(idNum, false);
       if (action === "ban") await adminApi.banCompany(idNum, false);
       if (action === "unban") await adminApi.banCompany(idNum, true);
-      await reload();
+      if (action === "delete") await adminApi.deleteCompany(idNum);
+      if (action === "delete") {
+        setItems((xs) => (xs ?? []).filter((x) => x.id !== co.id));
+      } else {
+        await reload();
+      }
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -112,6 +120,14 @@ export function AdminCompaniesPage() {
                 onClick={() => act(co, "ban")}
               >
                 Бан
+              </Button>
+              <Button
+                size="sm"
+                variant="danger"
+                disabled={!!busy[co.id]}
+                onClick={() => act(co, "delete")}
+              >
+                Удалить
               </Button>
             </div>
           </div>

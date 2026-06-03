@@ -142,6 +142,20 @@ def toggle_company_ban(
     return OkResponse(detail="active" if payload.is_active else "banned")
 
 
+@router.delete("/companies/{company_id}", response_model=OkResponse)
+def delete_company(company_id: int, db: Session = Depends(get_db)) -> OkResponse:
+    """Полностью снести компанию. Каскадно удалит её услуги, отзывы и лиды
+    (см. cascade='all, delete-orphan' в models). У всех привязанных
+    менеджеров обнулит company_id (FK ondelete=SET NULL) — следующий /me
+    self-heal приведёт их в роль user."""
+    company = db.get(Company, company_id)
+    if not company:
+        raise HTTPException(status_code=404, detail="Компания не найдена")
+    db.delete(company)
+    db.commit()
+    return OkResponse()
+
+
 # ── Модерация отзывов ──────────────────────────────────────────────────────
 
 @router.delete("/reviews/{review_id}", response_model=OkResponse)

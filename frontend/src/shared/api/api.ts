@@ -470,6 +470,10 @@ export const adminApi = {
     });
   },
 
+  async deleteCompany(companyId: number): Promise<void> {
+    await api(`/admin/companies/${companyId}`, { method: "DELETE" });
+  },
+
   // ── Отзывы ─────────────────────────────────────────────────────────────
   async deleteReview(reviewId: number): Promise<void> {
     await api(`/admin/reviews/${reviewId}`, { method: "DELETE" });
