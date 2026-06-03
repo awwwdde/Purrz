@@ -274,14 +274,26 @@ def _seed_bootstrap_users(db: Session) -> tuple[User | None, User | None, User |
     manager = ensure(settings.bootstrap_manager_email, settings.bootstrap_manager_password, UserRole.company_manager, "Менеджер Арктики")
     demo_user = ensure(settings.bootstrap_user_email, settings.bootstrap_user_password, UserRole.user, "Иван Демов")
 
-    # Принудительный ресет demo-юзера на каждом старте: если кто-то
-    # экспериментировал с регистрацией компании из-под demo@…, у него
-    # повисала привязка к чужой/тестовой компании, и при логине UI тащил
-    # его в /crm. Демо-юзер должен быть всегда «чистым» покупателем.
+    # Принудительный ресет ролей bootstrap-юзеров на каждом старте.
+    # Из-за старого бага register-company повышал admin → company_manager
+    # и привязывал к фантомной компании, после чего UI тащил модератора
+    # в /crm вместо /admin. Эти три юзера всегда должны быть в чистом
+    # каноничном состоянии для демо.
+    if admin and (admin.company_id or admin.role != UserRole.admin):
+        admin.company_id = None
+        admin.role = UserRole.admin
+        print(f"[seed] admin {admin.email} принудительно сброшен в роль admin")
+
     if demo_user and (demo_user.company_id or demo_user.role != UserRole.user):
         demo_user.company_id = None
         demo_user.role = UserRole.user
-        print(f"[seed] demo-юзер {demo_user.email} сброшен в роль user, company_id=None")
+        print(f"[seed] demo-юзер {demo_user.email} сброшен в роль user")
+
+    # manager привязывается к Арктике в _seed_demo_company; здесь только
+    # гарантируем правильную роль (на случай если кто-то её понизил).
+    if manager and manager.role != UserRole.company_manager:
+        manager.role = UserRole.company_manager
+        print(f"[seed] manager {manager.email} вернули в роль company_manager")
 
     db.commit()
     return admin, manager, demo_user
