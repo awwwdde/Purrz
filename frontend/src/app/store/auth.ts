@@ -33,7 +33,8 @@ export const useAuth = create<AuthState>()(
           // phantom companyId, и тогда мы получим уже чистое состояние без
           // редиректа в /crm на несуществующую компанию.
           try {
-            user = await realApi.getMe();
+            const fresh = await realApi.getMe();
+            if (fresh) user = fresh;  // null трактуем как «не критично»
           } catch {
             /* getMe не критичен — у нас уже есть user из логина */
           }
