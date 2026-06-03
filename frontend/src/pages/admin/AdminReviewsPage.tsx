@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/shared/ui";
-import { adminApi, realApi } from "@/shared/api/api";
+import { adminApi } from "@/shared/api/api";
 import type { Company } from "@/shared/types";
 import { formatRelative } from "@/shared/lib/format";
 

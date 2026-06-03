@@ -7,9 +7,9 @@ import { cn } from "@/shared/lib/cn";
 
 const items = [
   { to: "/admin", end: true, label: "Компании", icon: "building" as const },
-  { to: "/admin/reviews", label: "Отзывы", icon: "user" as const },
+  { to: "/admin/reviews", label: "Отзывы", icon: "leads" as const },
   { to: "/admin/users", label: "Пользователи", icon: "user" as const },
-  { to: "/admin/catalog", label: "Каталог", icon: "tag" as const },
+  { to: "/admin/catalog", label: "Каталог", icon: "dashboard" as const },
 ];
 
 export function AdminLayout() {
