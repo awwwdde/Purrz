@@ -40,6 +40,11 @@ class RefreshRequest(BaseModel):
 
 
 class UserOut(BaseModel):
+    # validation_alias — читаем snake_case из SQLAlchemy-атрибутов, но JSON
+    # на выход уходит с именем поля (camelCase), как ожидает фронт fetchMe.
+    # Если использовать обычный alias, Pydantic v2 + FastAPI сериализуют как
+    # snake_case → фронт получает undefined вместо companyId, и мы теряем
+    # привязку «есть компания» прямо после успешного /register-company.
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
     id: int
@@ -48,8 +53,8 @@ class UserOut(BaseModel):
     phone: str | None
     avatar: str | None
     role: UserRole
-    companyId: int | None = Field(alias="company_id")
-    createdAt: datetime = Field(alias="created_at")
+    companyId: int | None = Field(validation_alias="company_id")
+    createdAt: datetime = Field(validation_alias="created_at")
 
 
 # ── Каталог ────────────────────────────────────────────────────────────────
@@ -71,9 +76,9 @@ class ServiceOut(BaseModel):
     slug: str
     name: str
     description: str
-    categoryId: int = Field(alias="category_id")
-    minPrice: int = Field(alias="min_price")
-    maxPrice: int = Field(alias="max_price")
+    categoryId: int = Field(validation_alias="category_id")
+    minPrice: int = Field(validation_alias="min_price")
+    maxPrice: int = Field(validation_alias="max_price")
 
 
 class ServiceIn(BaseModel):
@@ -111,7 +116,11 @@ class CompanyServiceOut(BaseModel):
 
 class CompanyOut(BaseModel):
     """Полная карточка компании. Для листинга используем тот же объект —
-    галерея/отзывы могут быть пустыми, фронт сам выберет что показывать."""
+    галерея/отзывы могут быть пустыми, фронт сам выберет что показывать.
+
+    validation_alias — читаем snake_case с SQLA, отдаём camelCase JSON
+    (см. комментарий у UserOut).
+    """
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
     id: int
@@ -123,10 +132,10 @@ class CompanyOut(BaseModel):
     address: str
     contacts: CompanyContacts
     discount: int
-    yearsOnMarket: int = Field(alias="years_on_market")
+    yearsOnMarket: int = Field(validation_alias="years_on_market")
     views: int
-    rating: float = Field(alias="rating_avg")
-    reviewsCount: int = Field(alias="reviews_count")
+    rating: float = Field(validation_alias="rating_avg")
+    reviewsCount: int = Field(validation_alias="reviews_count")
     tariff: CompanyTariff
     verified: bool
     services: list[CompanyServiceOut] = []
@@ -175,10 +184,10 @@ class ReviewOut(BaseModel):
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
     id: int
-    author: str = Field(alias="author_name")
+    author: str = Field(validation_alias="author_name")
     rating: int
     text: str
-    date: datetime = Field(alias="created_at")
+    date: datetime = Field(validation_alias="created_at")
 
 
 class ReviewCreate(BaseModel):
@@ -206,16 +215,16 @@ class LeadOut(BaseModel):
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
     id: int
-    companyId: int = Field(alias="company_id")
+    companyId: int = Field(validation_alias="company_id")
     companyName: str | None = None
-    serviceId: int = Field(alias="service_id")
+    serviceId: int = Field(validation_alias="service_id")
     serviceName: str | None = None
-    userId: int | None = Field(alias="user_id", default=None)
-    userName: str = Field(alias="user_name")
-    userContact: str = Field(alias="user_contact")
+    userId: int | None = Field(validation_alias="user_id", default=None)
+    userName: str = Field(validation_alias="user_name")
+    userContact: str = Field(validation_alias="user_contact")
     comment: str
     status: LeadStatus
-    date: datetime = Field(alias="created_at")
+    date: datetime = Field(validation_alias="created_at")
 
 
 class LeadStatusUpdate(BaseModel):
