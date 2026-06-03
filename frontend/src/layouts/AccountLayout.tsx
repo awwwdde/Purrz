@@ -3,6 +3,7 @@ import { Header } from "@/widgets/Header";
 import { Footer } from "@/widgets/Footer";
 import { Container, Icon } from "@/shared/ui";
 import { useAuth } from "@/app/store/auth";
+import { useUserCompany } from "@/shared/lib/useUserCompany";
 import { cn } from "@/shared/lib/cn";
 
 const items = [
@@ -14,6 +15,10 @@ export function AccountLayout() {
   const user = useAuth((s) => s.user);
   const logout = useAuth((s) => s.logout);
   const navigate = useNavigate();
+  // Состояние компании пользователя — определяет, какая CTA показывается
+  // снизу sidebar'а: «Кабинет компании» (если компания реальна и загружена),
+  // «Подгружаем…» (пока проверяем) или «Разместить компанию» (нет / phantom).
+  const { company, status } = useUserCompany();
   return (
     <div className="min-h-screen flex flex-col bg-ink-50">
       <Header />
@@ -52,16 +57,29 @@ export function AccountLayout() {
                   </NavLink>
                 ))}
 
-                {/* Раздел про компанию: либо вход в кабинет компании, либо CTA на размещение */}
-                {user?.companyId ? (
+                {/* Раздел про компанию.
+                    • loaded   — реальная компания подтверждена, ведём в /crm
+                    • loading  — companyId есть, ещё тянем — disabled-кнопка
+                    • остальное (no_company / missing) — CTA на размещение */}
+                {status === "loaded" && company ? (
                   <button
                     onClick={() => navigate("/crm")}
                     className="mt-3 flex items-center gap-2 px-3 py-2 rounded-lg font-display text-sm font-semibold text-ink-950 bg-accent border border-ink-200 hover:translate-x-[1px] hover:translate-y-[1px] transition-transform"
                   >
                     <Icon name="dashboard" size={18} />
-                    Кабинет компании
-                    <Icon name="arrow-up-right" size={14} className="ml-auto" />
+                    <span className="truncate text-left flex-1">
+                      Кабинет {company.name}
+                    </span>
+                    <Icon name="arrow-up-right" size={14} className="shrink-0" />
                   </button>
+                ) : status === "loading" ? (
+                  <div
+                    className="mt-3 flex items-center gap-2 px-3 py-2 rounded-lg font-display text-sm font-semibold text-ink-400 border border-ink-200 bg-ink-50 cursor-wait"
+                    aria-disabled
+                  >
+                    <Icon name="dashboard" size={18} />
+                    Проверяем компанию…
+                  </div>
                 ) : (
                   <button
                     onClick={() => navigate("/register-company")}

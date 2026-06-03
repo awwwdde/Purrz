@@ -26,6 +26,7 @@ import { AdminUsersPage } from "@/pages/admin/AdminUsersPage";
 import { AdminReviewsPage } from "@/pages/admin/AdminReviewsPage";
 import { AdminCatalogPage } from "@/pages/admin/AdminCatalogPage";
 import { useAuth } from "@/app/store/auth";
+import { useUserCompany } from "@/shared/lib/useUserCompany";
 
 /** Любой авторизованный пользователь */
 function RequireAuth({ children }: { children: React.ReactNode }) {
@@ -60,10 +61,18 @@ function RequireAdmin({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-/** Авторизован И владеет компанией */
+/** Авторизован И владеет существующей компанией.
+ *
+ * Проверяем не только наличие companyId в auth-сторе (он может быть phantom
+ * из persisted localStorage), но и что компания реально подгружается с бэка.
+ * useUserCompany сам почистит фантомный id, мы лишь редиректим на /account,
+ * если итоговый статус не "loaded".
+ */
 function RequireCompany({ children }: { children: React.ReactNode }) {
   const user = useAuth((s) => s.user);
+  const { status } = useUserCompany();
   const location = useLocation();
+
   if (!user) {
     return (
       <Navigate
@@ -72,8 +81,17 @@ function RequireCompany({ children }: { children: React.ReactNode }) {
       />
     );
   }
-  if (!user.companyId) {
-    // У пользователя нет привязанной компании — отправляем в ЛК
+  if (status === "loading") {
+    // Маленький neutral-fallback вместо мигания «пустого» CRM-каркаса.
+    return (
+      <div className="min-h-screen grid place-items-center bg-ink-50 text-ink-500 font-display text-sm">
+        Загружаем кабинет…
+      </div>
+    );
+  }
+  if (status !== "loaded") {
+    // no_company | missing | no_user — едем в ЛК. Там пользователь увидит
+    // блок «Разместить компанию» / «Компания не найдена».
     return <Navigate to="/account" replace />;
   }
   return <>{children}</>;

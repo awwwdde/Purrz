@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Button, Container, Icon } from "@/shared/ui";
 import { cn } from "@/shared/lib/cn";
 import { useAuth } from "@/app/store/auth";
+import { useUserCompany } from "@/shared/lib/useUserCompany";
 
 const links = [
   { to: "/", label: "Главная", end: true },
@@ -18,6 +19,10 @@ export function Header() {
   const user = useAuth((s) => s.user);
   const logout = useAuth((s) => s.logout);
   const navigate = useNavigate();
+  // Показ кнопки «Кабинет компании» — только если компания реально
+  // подгрузилась с бэка. Иначе у persisted-phantom companyId кнопка вела
+  // бы в /crm, который потом редиректит обратно — мерцание UI.
+  const { status: companyStatus } = useUserCompany();
 
   return (
     <header className="sticky top-0 z-40 bg-ink-50/90 backdrop-blur-md border-b border-ink-200">
@@ -89,7 +94,7 @@ export function Header() {
                 <Button variant="danger" size="sm" onClick={() => navigate("/admin")}>
                   Админ-панель
                 </Button>
-              ) : user.companyId ? (
+              ) : companyStatus === "loaded" ? (
                 <Button variant="primary" size="sm" onClick={() => navigate("/crm")}>
                   Кабинет компании
                 </Button>
@@ -185,7 +190,7 @@ export function Header() {
                     >
                       Админ-панель
                     </Button>
-                  ) : user.companyId ? (
+                  ) : companyStatus === "loaded" ? (
                     <Button
                       variant="primary"
                       onClick={() => {
