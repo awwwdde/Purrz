@@ -273,6 +273,16 @@ def _seed_bootstrap_users(db: Session) -> tuple[User | None, User | None, User |
     admin = ensure(settings.bootstrap_admin_email, settings.bootstrap_admin_password, UserRole.admin, "Модератор")
     manager = ensure(settings.bootstrap_manager_email, settings.bootstrap_manager_password, UserRole.company_manager, "Менеджер Арктики")
     demo_user = ensure(settings.bootstrap_user_email, settings.bootstrap_user_password, UserRole.user, "Иван Демов")
+
+    # Принудительный ресет demo-юзера на каждом старте: если кто-то
+    # экспериментировал с регистрацией компании из-под demo@…, у него
+    # повисала привязка к чужой/тестовой компании, и при логине UI тащил
+    # его в /crm. Демо-юзер должен быть всегда «чистым» покупателем.
+    if demo_user and (demo_user.company_id or demo_user.role != UserRole.user):
+        demo_user.company_id = None
+        demo_user.role = UserRole.user
+        print(f"[seed] demo-юзер {demo_user.email} сброшен в роль user, company_id=None")
+
     db.commit()
     return admin, manager, demo_user
 

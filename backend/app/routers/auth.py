@@ -166,9 +166,12 @@ def register_company(
             price=s.price, discount=s.discount, description=s.description,
         ))
 
-    # Связываем user → company и повышаем роль
+    # Связываем user → company. Роль повышаем ТОЛЬКО если это обычный user;
+    # admin/модератор остаётся в своей роли, иначе теряет доступ к /admin
+    # и проваливается в /crm против своей воли.
     user.company_id = company.id
-    user.role = UserRole.company_manager
+    if user.role == UserRole.user:
+        user.role = UserRole.company_manager
 
     db.commit()
     db.refresh(company)

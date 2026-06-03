@@ -85,11 +85,15 @@ export function Header() {
               <Button variant="outline" size="sm" onClick={() => navigate("/account")}>
                 Мой кабинет
               </Button>
-              {user.companyId && (
+              {user.role === "admin" ? (
+                <Button variant="danger" size="sm" onClick={() => navigate("/admin")}>
+                  Админ-панель
+                </Button>
+              ) : user.companyId ? (
                 <Button variant="primary" size="sm" onClick={() => navigate("/crm")}>
                   Кабинет компании
                 </Button>
-              )}
+              ) : null}
               <button
                 onClick={logout}
                 title="Выйти"
@@ -171,7 +175,17 @@ export function Header() {
                   >
                     Личный кабинет
                   </Button>
-                  {user.companyId && (
+                  {user.role === "admin" ? (
+                    <Button
+                      variant="danger"
+                      onClick={() => {
+                        setOpen(false);
+                        navigate("/admin");
+                      }}
+                    >
+                      Админ-панель
+                    </Button>
+                  ) : user.companyId ? (
                     <Button
                       variant="primary"
                       onClick={() => {
@@ -181,7 +195,7 @@ export function Header() {
                     >
                       Кабинет компании
                     </Button>
-                  )}
+                  ) : null}
                   <Button
                     variant="ghost"
                     onClick={() => {
